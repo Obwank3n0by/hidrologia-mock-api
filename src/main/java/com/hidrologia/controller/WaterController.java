@@ -2,12 +2,6 @@ package com.hidrologia.controller;
 
 import com.hidrologia.model.WaterLevel;
 import com.hidrologia.service.HidrologiaService;
-import io.smallrye.openapi.annotations.Operation;
-import io.smallrye.openapi.annotations.media.Content;
-import io.smallrye.openapi.annotations.media.Schema;
-import io.smallrye.openapi.annotations.responses.APIResponse;
-import io.smallrye.openapi.annotations.responses.APIResponses;
-import io.smallrye.openapi.annotations.tags.Tag;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -19,7 +13,6 @@ import java.util.Optional;
 @Path("/api/water")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Water Levels API", description = "Operaciones para consultar niveles de agua en estaciones hidrológicas")
 public class WaterController {
 
     @Inject
@@ -27,14 +20,6 @@ public class WaterController {
 
     @GET
     @Path("/levels")
-    @Operation(summary = "Obtener todos los niveles de agua", 
-               description = "Retorna una lista completa de todas las estaciones con sus niveles actuales de agua")
-    @APIResponses({
-        @APIResponse(responseCode = "200", description = "Lista de niveles obtenida exitosamente",
-                    content = @Content(mediaType = "application/json", 
-                                     schema = @Schema(implementation = WaterLevel.class))),
-        @APIResponse(responseCode = "500", description = "Error interno del servidor")
-    })
     public Response getAllWaterLevels() {
         try {
             List<WaterLevel> levels = hidrologiaService.getAllWaterLevels();
@@ -48,15 +33,6 @@ public class WaterController {
 
     @GET
     @Path("/levels/{stationId}")
-    @Operation(summary = "Obtener nivel de agua por ID de estación", 
-               description = "Retorna el nivel de agua de una estación específica")
-    @APIResponses({
-        @APIResponse(responseCode = "200", description = "Nivel de agua encontrado",
-                    content = @Content(mediaType = "application/json", 
-                                     schema = @Schema(implementation = WaterLevel.class))),
-        @APIResponse(responseCode = "404", description = "Estación no encontrada"),
-        @APIResponse(responseCode = "500", description = "Error interno del servidor")
-    })
     public Response getWaterLevelByStationId(@PathParam("stationId") String stationId) {
         try {
             Optional<WaterLevel> level = hidrologiaService.getWaterLevelByStationId(stationId);
@@ -76,15 +52,6 @@ public class WaterController {
 
     @GET
     @Path("/levels/type/{type}")
-    @Operation(summary = "Obtener niveles por tipo de fuente", 
-               description = "Retorna niveles de agua filtrados por tipo de fuente (RIO, EMBALSE, LAGO, ACUIFERO)")
-    @APIResponses({
-        @APIResponse(responseCode = "200", description = "Niveles filtrados por tipo obtenidos exitosamente",
-                    content = @Content(mediaType = "application/json", 
-                                     schema = @Schema(implementation = WaterLevel.class))),
-        @APIResponse(responseCode = "400", description = "Tipo de fuente inválido"),
-        @APIResponse(responseCode = "500", description = "Error interno del servidor")
-    })
     public Response getWaterLevelsByType(@PathParam("type") String type) {
         try {
             WaterLevel.WaterType waterType = WaterLevel.WaterType.valueOf(type.toUpperCase());
@@ -103,15 +70,6 @@ public class WaterController {
 
     @GET
     @Path("/levels/alerts/{alertStatus}")
-    @Operation(summary = "Obtener niveles por estado de alerta", 
-               description = "Retorna niveles de agua filtrados por estado de alerta (NORMAL, PRECAUCION, ALERTA, EMERGENCIA)")
-    @APIResponses({
-        @APIResponse(responseCode = "200", description = "Niveles filtrados por alerta obtenidos exitosamente",
-                    content = @Content(mediaType = "application/json", 
-                                     schema = @Schema(implementation = WaterLevel.class))),
-        @APIResponse(responseCode = "400", description = "Estado de alerta inválido"),
-        @APIResponse(responseCode = "500", description = "Error interno del servidor")
-    })
     public Response getWaterLevelsByAlertStatus(@PathParam("alertStatus") String alertStatus) {
         try {
             WaterLevel.AlertStatus status = WaterLevel.AlertStatus.valueOf(alertStatus.toUpperCase());
@@ -130,12 +88,6 @@ public class WaterController {
 
     @GET
     @Path("/health")
-    @Operation(summary = "Health check del sistema hidrológico", 
-               description = "Verifica el estado general del sistema de monitoreo")
-    @APIResponses({
-        @APIResponse(responseCode = "200", description = "Sistema funcionando correctamente"),
-        @APIResponse(responseCode = "503", description = "Sistema con problemas")
-    })
     public Response getWaterSystemHealth() {
         try {
             boolean isHealthy = hidrologiaService.isSystemHealthy();

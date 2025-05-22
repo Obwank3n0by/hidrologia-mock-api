@@ -9,7 +9,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Hidrología Mock API</name>
+    <n>Hidrología Mock API</n>
     <description>API Mock para sistema de monitoreo hidrológico</description>
 
     <properties>
@@ -45,12 +45,6 @@
             <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
         </dependency>
         
-        <!-- OpenAPI/Swagger Support -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-smallrye-openapi</artifactId>
-        </dependency>
-        
         <!-- Health Check -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -67,33 +61,6 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
-        </dependency>
-
-        <!-- Dependencias adicionales para OpenAPI -->
-        <dependency>
-            <groupId>io.smallrye</groupId>
-            <artifactId>smallrye-open-api-core</artifactId>
-        </dependency>
-        
-        <!-- Jakarta EE APIs explícitas -->
-        <dependency>
-            <groupId>jakarta.ws.rs</groupId>
-            <artifactId>jakarta.ws.rs-api</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>jakarta.validation</groupId>
-            <artifactId>jakarta.validation-api</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>jakarta.enterprise</groupId>
-            <artifactId>jakarta.enterprise.cdi-api</artifactId>
-        </dependency>
-        
-        <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
         </dependency>
     </dependencies>
 
