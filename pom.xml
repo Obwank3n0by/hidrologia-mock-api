@@ -9,7 +9,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <n>Hidrología Mock API</n>
+    <name>Hidrología Mock API</name>
     <description>API Mock para sistema de monitoreo hidrológico</description>
 
     <properties>
