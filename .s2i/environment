@@ -1,11 +1,11 @@
-# Variables S2I para Hidrología Mock API
+# Variables S2I corregidas para Hidrología Mock API
 
 # Configuración de Maven
 MAVEN_ARGS=clean package -DskipTests=true -Dquarkus.package.type=fast-jar
 
-# Configuración del JAR principal
-ARTIFACT_DIR=target/quarkus-app
-ARTIFACT_COPY_ARGS=--no-same-owner
+# Configuración del artefacto (NUEVO FORMATO)
+S2I_SOURCE_DEPLOYMENTS_FILTER=*.jar
+MAVEN_S2I_ARTIFACT_DIRS=target/quarkus-app
 
 # Variables de entorno para el contenedor
 QUARKUS_HTTP_HOST=0.0.0.0
