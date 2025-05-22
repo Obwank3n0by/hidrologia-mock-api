@@ -9,7 +9,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <n>Hidrología Mock API v1</n>
+    <n>Hidrología Mock API</n>
     <description>API Mock para sistema de monitoreo hidrológico</description>
 
     <properties>
@@ -68,7 +68,6 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
         </dependency>
-
 
         <!-- Dependencias adicionales para OpenAPI -->
         <dependency>
