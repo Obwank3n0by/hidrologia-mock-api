@@ -1,0 +1,196 @@
+# Manifiestos completos para Hidrología Mock API en OpenShift
+apiVersion: v1
+kind: List
+metadata:
+  name: hidrologia-mock-api
+  labels:
+    app: hidrologia-mock-api
+    app.kubernetes.io/name: hidrologia-mock-api
+    app.kubernetes.io/part-of: hidrologia-system
+items:
+
+# ImageStream
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    lookupPolicy:
+      local: false
+
+# BuildConfig
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: hidrologia-mock-api:latest
+    source:
+      type: Git
+      git:
+        uri: https://github.com/Obwank3n0by/hidrologia-mock-api.git
+        ref: main
+    strategy:
+      type: Source
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          namespace: openshift
+          name: java:openjdk-17-ubi8
+        env:
+        - name: MAVEN_ARGS
+          value: "clean package -DskipTests=true -Dquarkus.package.type=fast-jar"
+        - name: ARTIFACT_DIR
+          value: "target/quarkus-app"
+    triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secret: hidrologia-webhook-secret
+    - type: Generic
+      generic:
+        secret: hidrologia-webhook-secret
+
+# DeploymentConfig
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    replicas: 1
+    selector:
+      app: hidrologia-mock-api
+      deploymentconfig: hidrologia-mock-api
+    strategy:
+      type: Rolling
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+    template:
+      metadata:
+        labels:
+          app: hidrologia-mock-api
+          deploymentconfig: hidrologia-mock-api
+      spec:
+        containers:
+        - name: hidrologia-mock-api
+          image: hidrologia-mock-api:latest
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          env:
+          - name: QUARKUS_HTTP_HOST
+            value: "0.0.0.0"
+          - name: QUARKUS_HTTP_PORT
+            value: "8080"
+          - name: JAVA_OPTIONS
+            value: "-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+              - ALL
+            seccompProfile:
+              type: RuntimeDefault
+        securityContext:
+          fsGroup: 1001
+        restartPolicy: Always
+    triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - hidrologia-mock-api
+        from:
+          kind: ImageStreamTag
+          name: hidrologia-mock-api:latest
+
+# Service
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: hidrologia-mock-api
+      deploymentconfig: hidrologia-mock-api
+    type: ClusterIP
+
+# Route
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: hidrologia-mock-api-route
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    to:
+      kind: Service
+      name: hidrologia-mock-api
+      weight: 100
+    port:
+      targetPort: 8080-tcp
+    tls:
+      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+    wildcardPolicy: None
+
+# ServiceMonitor para Prometheus (opcional)
+- apiVersion: monitoring.coreos.com/v1
+  kind: ServiceMonitor
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    selector:
+      matchLabels:
+        app: hidrologia-mock-api
+    endpoints:
+    - port: 8080-tcp
+      path: /q/metrics
+      interval: 30s
