@@ -1,4 +1,5 @@
 # Manifiestos completos para Hidrología Mock API en OpenShift
+# Corregido para Security Context Constraints de OpenShift
 apiVersion: v1
 kind: List
 metadata:
@@ -8,6 +9,14 @@ metadata:
     app.kubernetes.io/name: hidrologia-mock-api
     app.kubernetes.io/part-of: hidrologia-system
 items:
+
+# ServiceAccount
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: hidrologia-mock-api
+    labels:
+      app: hidrologia-mock-api
 
 # ImageStream
 - apiVersion: image.openshift.io/v1
@@ -20,7 +29,6 @@ items:
     lookupPolicy:
       local: false
 
-# BuildConfig
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
@@ -35,7 +43,7 @@ items:
     source:
       type: Git
       git:
-        uri: https://github.com/Obwank3n0by/hidrologia-mock-api.git
+        uri: https://github.com/TU-USUARIO/hidrologia-mock-api.git
         ref: main
     strategy:
       type: Source
@@ -47,8 +55,14 @@ items:
         env:
         - name: MAVEN_ARGS
           value: "clean package -DskipTests=true -Dquarkus.package.type=fast-jar"
+        # Configuración correcta para Quarkus Fast JAR
         - name: ARTIFACT_DIR
           value: "target/quarkus-app"
+        # Variables adicionales para asegurar la copia correcta
+        - name: MAVEN_CLEAR_REPO
+          value: "false"
+        - name: MAVEN_OPTS
+          value: "-Xmx1024m"
     triggers:
     - type: ConfigChange
     - type: GitHub
@@ -57,39 +71,58 @@ items:
     - type: Generic
       generic:
         secret: hidrologia-webhook-secret
+    - type: ImageChange
+      imageChange:
+        from:
+          kind: ImageStreamTag
+          namespace: openshift
+          name: java:openjdk-17-ubi8
 
-# DeploymentConfig
-- apiVersion: apps.openshift.io/v1
-  kind: DeploymentConfig
+# Deployment (Compatible con OpenShift SCC)
+- apiVersion: apps/v1
+  kind: Deployment
   metadata:
     name: hidrologia-mock-api
     labels:
       app: hidrologia-mock-api
+      app.kubernetes.io/name: hidrologia-mock-api
+      app.kubernetes.io/part-of: hidrologia-system
   spec:
     replicas: 1
     selector:
-      app: hidrologia-mock-api
-      deploymentconfig: hidrologia-mock-api
+      matchLabels:
+        app: hidrologia-mock-api
     strategy:
-      type: Rolling
-      rollingParams:
-        intervalSeconds: 1
-        maxSurge: 25%
-        maxUnavailable: 25%
-        timeoutSeconds: 600
-        updatePeriodSeconds: 1
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 0
     template:
       metadata:
         labels:
           app: hidrologia-mock-api
-          deploymentconfig: hidrologia-mock-api
+        annotations:
+          # Annotations para auto-update cuando cambie la imagen
+          image.openshift.io/triggers: |
+            [
+              {
+                "from": {
+                  "kind": "ImageStreamTag",
+                  "name": "hidrologia-mock-api:latest"
+                },
+                "fieldPath": "spec.template.spec.containers[0].image"
+              }
+            ]
       spec:
+        serviceAccountName: hidrologia-mock-api
         containers:
         - name: hidrologia-mock-api
           image: hidrologia-mock-api:latest
+          imagePullPolicy: Always
           ports:
           - containerPort: 8080
             protocol: TCP
+            name: http
           env:
           - name: QUARKUS_HTTP_HOST
             value: "0.0.0.0"
@@ -97,6 +130,8 @@ items:
             value: "8080"
           - name: JAVA_OPTIONS
             value: "-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
+          - name: QUARKUS_LOG_LEVEL
+            value: "INFO"
           resources:
             limits:
               cpu: 500m
@@ -108,39 +143,42 @@ items:
             httpGet:
               path: /q/health/live
               port: 8080
+              scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+            successThreshold: 1
           readinessProbe:
             httpGet:
               path: /q/health/ready
               port: 8080
+              scheme: HTTP
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /q/health/started
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 30
+            successThreshold: 1
+          # Security Context SIMPLIFICADO para OpenShift
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             capabilities:
               drop:
               - ALL
-            seccompProfile:
-              type: RuntimeDefault
-        securityContext:
-          fsGroup: 1001
+        # Security Context del Pod REMOVIDO - OpenShift lo asigna automáticamente
         restartPolicy: Always
-    triggers:
-    - type: ConfigChange
-    - type: ImageChange
-      imageChangeParams:
-        automatic: true
-        containerNames:
-        - hidrologia-mock-api
-        from:
-          kind: ImageStreamTag
-          name: hidrologia-mock-api:latest
+        terminationGracePeriodSeconds: 30
 
 # Service
 - apiVersion: v1
@@ -149,16 +187,18 @@ items:
     name: hidrologia-mock-api
     labels:
       app: hidrologia-mock-api
+      app.kubernetes.io/name: hidrologia-mock-api
+      app.kubernetes.io/part-of: hidrologia-system
   spec:
     ports:
-    - name: 8080-tcp
+    - name: http
       port: 8080
       protocol: TCP
       targetPort: 8080
     selector:
       app: hidrologia-mock-api
-      deploymentconfig: hidrologia-mock-api
     type: ClusterIP
+    sessionAffinity: None
 
 # Route
 - apiVersion: route.openshift.io/v1
@@ -167,19 +207,62 @@ items:
     name: hidrologia-mock-api-route
     labels:
       app: hidrologia-mock-api
+      app.kubernetes.io/name: hidrologia-mock-api
+      app.kubernetes.io/part-of: hidrologia-system
   spec:
     to:
       kind: Service
       name: hidrologia-mock-api
       weight: 100
     port:
-      targetPort: 8080-tcp
+      targetPort: http
     tls:
       termination: edge
       insecureEdgeTerminationPolicy: Redirect
     wildcardPolicy: None
 
-# ServiceMonitor para Prometheus (opcional)
+# HorizontalPodAutoscaler (Opcional)
+- apiVersion: autoscaling/v2
+  kind: HorizontalPodAutoscaler
+  metadata:
+    name: hidrologia-mock-api-hpa
+    labels:
+      app: hidrologia-mock-api
+  spec:
+    scaleTargetRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: hidrologia-mock-api
+    minReplicas: 1
+    maxReplicas: 3
+    metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+
+# ServiceMonitor para Prometheus (Opcional)
 - apiVersion: monitoring.coreos.com/v1
   kind: ServiceMonitor
   metadata:
@@ -191,6 +274,22 @@ items:
       matchLabels:
         app: hidrologia-mock-api
     endpoints:
-    - port: 8080-tcp
+    - port: http
       path: /q/metrics
       interval: 30s
+      scrapeTimeout: 10s
+
+# ConfigMap para configuración adicional (Opcional)
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: hidrologia-mock-api-config
+    labels:
+      app: hidrologia-mock-api
+  data:
+    application.properties: |
+      # Configuración adicional para producción
+      quarkus.log.level=INFO
+      quarkus.log.console.format=%d{HH:mm:ss} %-5p [%c{2.}] (%t) %s%e%n
+      quarkus.http.cors=true
+      quarkus.http.cors.origins=*
