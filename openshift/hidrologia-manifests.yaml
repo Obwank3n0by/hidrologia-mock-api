@@ -29,7 +29,7 @@ items:
     lookupPolicy:
       local: false
 
-# BuildConfig
+# BuildConfig usando Docker Strategy (como meteorología)
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
@@ -47,17 +47,12 @@ items:
         uri: https://github.com/Obwank3n0by/meteorologia-mock-api.git
         ref: main
     strategy:
-      type: Source
-      sourceStrategy:
+      type: Docker
+      dockerStrategy:
         from:
           kind: ImageStreamTag
           namespace: openshift
           name: java:openjdk-17-ubi8
-        env:
-        - name: MAVEN_ARGS
-          value: "clean package -DskipTests=true -Dquarkus.package.type=fast-jar"
-        - name: ARTIFACT_DIR
-          value: "target/quarkus-app"
     triggers:
     - type: ConfigChange
     - type: GitHub
