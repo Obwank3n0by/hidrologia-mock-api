@@ -1,4 +1,5 @@
 # Manifiestos completos para Hidrología Mock API en OpenShift
+# Configuración S2I que funciona (basada en meteorología)
 apiVersion: v1
 kind: List
 metadata:
@@ -28,7 +29,7 @@ items:
     lookupPolicy:
       local: false
 
-# BuildConfig usando Docker Strategy (como meteorología)
+# BuildConfig usando S2I (configuración exacta de meteorología)
 - apiVersion: build.openshift.io/v1
   kind: BuildConfig
   metadata:
@@ -36,36 +37,36 @@ items:
     labels:
       app: hidrologia-mock-api
   spec:
+    nodeSelector: null
     output:
       to:
         kind: ImageStreamTag
-        name: hidrologia-mock-api:latest
+        name: 'hidrologia-mock-api:latest'
+    resources: {}
+    successfulBuildsHistoryLimit: 5
+    failedBuildsHistoryLimit: 5
+    strategy:
+      type: Source
+      sourceStrategy:
+        from:
+          kind: DockerImage
+          name: 'registry.redhat.io/ubi8/openjdk-17:1.18'
+        env:
+        - name: MAVEN_ARGS
+          value: clean package -DskipTests -Dquarkus.package.type=fast-jar
+        - name: MAVEN_OPTS
+          value: '-Xmx1024m'
+        - name: JAVA_APP_JAR
+          value: quarkus-run.jar
+    postCommit: {}
     source:
       type: Git
       git:
-        uri: https://github.com/Obwank3n0by/meteorologia-mock-api.git
+        uri: 'https://github.com/Obwank3n0by/hidrologia-mock-api.git'
         ref: main
-    strategy:
-      type: Docker
-      dockerStrategy:
-        from:
-          kind: ImageStreamTag
-          namespace: openshift
-          name: java:openjdk-17-ubi8
     triggers:
     - type: ConfigChange
-    - type: GitHub
-      github:
-        secret: hidrologia-webhook-secret
-    - type: Generic
-      generic:
-        secret: hidrologia-webhook-secret
-    - type: ImageChange
-      imageChange:
-        from:
-          kind: ImageStreamTag
-          namespace: openshift
-          name: java:openjdk-17-ubi8
+    runPolicy: Serial
 
 # Deployment (Configuración exacta de meteorología que funciona)
 - apiVersion: apps/v1

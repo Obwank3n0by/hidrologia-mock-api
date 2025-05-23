@@ -1,7 +1,5 @@
-# Dockerfile para OpenShift Source-to-Image (S2I)
-# Este Dockerfile funciona con el proceso S2I de OpenShift donde Maven se ejecuta automáticamente
-
-FROM registry.access.redhat.com/ubi8/openjdk-17:1.18
+# Dockerfile simple para S2I (como meteorología)
+FROM registry.redhat.io/ubi8/openjdk-17:1.18
 
 # Metadatos para OpenShift
 LABEL name="hidrologia-mock-api" \
@@ -34,19 +32,7 @@ ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 \
                       -XX:AdaptiveSizePolicyWeight=90 \
                       -XX:+ExitOnOutOfMemoryError"
 
-# Configuración del usuario para OpenShift (usuario no privilegiado)
-USER root
-
-# Crear directorio de trabajo y configurar permisos para OpenShift
-RUN chown 185:0 /deployments && \
-    chmod "g+rwX" /deployments && \
-    chown 185:0 /deployments
-
-# Cambiar al usuario no privilegiado
-USER 185
-
 # Puerto expuesto
 EXPOSE 8080
 
-# El punto de entrada se maneja automáticamente por la imagen base de OpenJDK
-# Los archivos compilados serán copiados automáticamente por el proceso S2I
+# El build y deployment se maneja por S2I
