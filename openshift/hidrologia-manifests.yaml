@@ -78,7 +78,7 @@ items:
           namespace: openshift
           name: java:openjdk-17-ubi8
 
-# Deployment (Compatible con OpenShift SCC)
+# Deployment corregido basado en la configuración que funciona en meteorología
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
@@ -95,8 +95,8 @@ items:
     strategy:
       type: RollingUpdate
       rollingUpdate:
-        maxSurge: 1
-        maxUnavailable: 0
+        maxSurge: 25%
+        maxUnavailable: 25%
     template:
       metadata:
         labels:
@@ -124,62 +124,65 @@ items:
             protocol: TCP
             name: http
           env:
+          # Variables clave que funcionan en meteorología
+          - name: JAVA_APP_JAR
+            value: /deployments/quarkus-app/quarkus-run.jar
+          - name: JAVA_LIB_DIR
+            value: /deployments/quarkus-app/lib/
+          - name: JAVA_CLASSPATH
+            value: /deployments/quarkus-app/lib/*:/deployments/quarkus-app/app/*:/deployments/quarkus-app/quarkus/*
           - name: QUARKUS_HTTP_HOST
             value: "0.0.0.0"
           - name: QUARKUS_HTTP_PORT
             value: "8080"
-          - name: JAVA_OPTIONS
+          - name: LANG
+            value: C.UTF-8
+          - name: LC_ALL
+            value: C.UTF-8
+          - name: JAVA_OPTS_APPEND
             value: "-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
-          - name: QUARKUS_LOG_LEVEL
-            value: "INFO"
+          - name: JAVA_OPTIONS
+            value: "-Xms128m -Xmx512m -XX:+UseParallelGC"
           resources:
             limits:
               cpu: 500m
               memory: 512Mi
             requests:
-              cpu: 200m
+              cpu: 100m
               memory: 256Mi
           livenessProbe:
             httpGet:
-              path: /q/health/live
+              path: /api/water/health
               port: 8080
               scheme: HTTP
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 45
             timeoutSeconds: 5
-            failureThreshold: 3
+            periodSeconds: 10
             successThreshold: 1
+            failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /q/health/ready
+              path: /api/water/health
               port: 8080
               scheme: HTTP
-            initialDelaySeconds: 10
+            initialDelaySeconds: 20
+            timeoutSeconds: 3
             periodSeconds: 5
-            timeoutSeconds: 3
+            successThreshold: 1
             failureThreshold: 3
-            successThreshold: 1
-          startupProbe:
-            httpGet:
-              path: /q/health/started
-              port: 8080
-              scheme: HTTP
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 30
-            successThreshold: 1
-          # Security Context SIMPLIFICADO para OpenShift
           securityContext:
-            allowPrivilegeEscalation: false
-            runAsNonRoot: true
             capabilities:
               drop:
               - ALL
-        # Security Context del Pod REMOVIDO - OpenShift lo asigna automáticamente
+            runAsNonRoot: true
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
         restartPolicy: Always
         terminationGracePeriodSeconds: 30
-
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
 # Service
 - apiVersion: v1
   kind: Service

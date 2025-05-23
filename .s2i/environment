@@ -1,15 +1,17 @@
-# Variables S2I corregidas para Quarkus Fast JAR
+# Variables S2I basadas en la configuración exitosa de meteorología
 
-# Configuración de Maven
+# Configuración de Maven para Fast JAR (como en meteorología)
 MAVEN_ARGS=clean package -DskipTests=true -Dquarkus.package.type=fast-jar
 
-# Configuración del artefacto para Quarkus Fast JAR
-# Esto copia toda la estructura target/quarkus-app/*
+# Configuración del artefacto para Fast JAR
 ARTIFACT_DIR=target/quarkus-app
 
-# Variables de entorno para el contenedor
+# Variables de entorno adicionales
 QUARKUS_HTTP_HOST=0.0.0.0
 QUARKUS_HTTP_PORT=8080
+LANG=C.UTF-8
+LC_ALL=C.UTF-8
 
-# Optimizaciones JVM para contenedores
-JAVA_OPTIONS=-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager
+# Optimizaciones JVM
+JAVA_OPTIONS=-Xms128m -Xmx512m -XX:+UseParallelGC
+JAVA_OPTS_APPEND=-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager
