@@ -1,5 +1,4 @@
 # Manifiestos completos para Hidrología Mock API en OpenShift
-# Basado en la configuración exitosa de meteorología
 apiVersion: v1
 kind: List
 metadata:
