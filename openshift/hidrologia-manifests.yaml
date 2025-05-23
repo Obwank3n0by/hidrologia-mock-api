@@ -43,7 +43,7 @@ items:
     source:
       type: Git
       git:
-        uri: https://github.com/TU-USUARIO/hidrologia-mock-api.git
+        uri: https://github.com/Obwank3n0by/hidrologia-mock-api.git
         ref: main
     strategy:
       type: Source
