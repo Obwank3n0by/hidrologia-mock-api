@@ -1,32 +1,52 @@
-# Hidrología Mock API - Dockerfile optimizado para OpenShift
-FROM registry.access.redhat.com/ubi8/openjdk-17-runtime:1.18
+# Dockerfile para OpenShift Source-to-Image (S2I)
+# Este Dockerfile funciona con el proceso S2I de OpenShift donde Maven se ejecuta automáticamente
 
-# Metadatos
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.18
+
+# Metadatos para OpenShift
 LABEL name="hidrologia-mock-api" \
       version="1.0.0" \
-      description="API Mock para sistema de monitoreo hidrológico" \
-      maintainer="admin@hidrologia.com"
+      architecture="x86_64" \
+      summary="API Mock de Hidrología desarrollada con Quarkus" \
+      description="Microservicio mock para datos hidrológicos que proporciona endpoints REST para desarrollo y testing" \
+      maintainer="Equipo de Hidrología <admin@hidrologia.com>" \
+      io.k8s.description="API Mock de Hidrología con Quarkus" \
+      io.k8s.display-name="Hidrología Mock API" \
+      io.openshift.expose-services="8080:http" \
+      io.openshift.tags="java,quarkus,api,mock,hidrologia"
 
-# Variables de entorno para Quarkus
+# Variables de entorno
+ENV LANGUAGE='en_US:en' \
+    LANG='en_US.UTF-8' \
+    LC_ALL='en_US.UTF-8'
+
+# Configuración específica de Quarkus para OpenShift
 ENV QUARKUS_HTTP_HOST=0.0.0.0 \
-    QUARKUS_HTTP_PORT=8080 \
-    JAVA_OPTS="-Dquarkus.http.host=0.0.0.0"
+    QUARKUS_HTTP_PORT=8080
 
-# Crear directorio de trabajo
-WORKDIR /deployments
+# Configuración optimizada de JVM para contenedores
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 \
+                      -Djava.util.logging.manager=org.jboss.logmanager.LogManager \
+                      -XX:+UseParallelGC \
+                      -XX:MinHeapFreeRatio=10 \
+                      -XX:MaxHeapFreeRatio=20 \
+                      -XX:GCTimeRatio=4 \
+                      -XX:AdaptiveSizePolicyWeight=90 \
+                      -XX:+ExitOnOutOfMemoryError"
 
-# Copiar el JAR compilado (debe estar en target/)
-COPY target/quarkus-app/lib/ /deployments/lib/
-COPY target/quarkus-app/*.jar /deployments/
-COPY target/quarkus-app/app/ /deployments/app/
-COPY target/quarkus-app/quarkus/ /deployments/quarkus/
+# Configuración del usuario para OpenShift (usuario no privilegiado)
+USER root
 
-# Exponer puerto
+# Crear directorio de trabajo y configurar permisos para OpenShift
+RUN chown 185:0 /deployments && \
+    chmod "g+rwX" /deployments && \
+    chown 185:0 /deployments
+
+# Cambiar al usuario no privilegiado
+USER 185
+
+# Puerto expuesto
 EXPOSE 8080
 
-# Health checks
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/q/health || exit 1
-
-# Comando de inicio (compatible con cualquier usuario)
-CMD ["java", "-jar", "/deployments/quarkus-run.jar"]
+# El punto de entrada se maneja automáticamente por la imagen base de OpenJDK
+# Los archivos compilados serán copiados automáticamente por el proceso S2I
