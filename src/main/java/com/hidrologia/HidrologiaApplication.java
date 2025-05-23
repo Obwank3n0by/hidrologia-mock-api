@@ -33,3 +33,6 @@ import jakarta.ws.rs.core.Application;
         @Tag(name = "Reservoirs API", description = "Gestión de información de embalses y reservorios")
     }
 )
+public class HidrologiaApplication extends Application {
+    // Configuración automática de Quarkus
+}
